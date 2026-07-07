@@ -477,6 +477,34 @@ ggsave(paste0(getwd(),"/Figs/core_area_ts.jpeg"), plot=last_plot(),
 # Move forward with a biomass density threshold of exp(7)
 core_maps_7 <- core_maps %>% filter(threshold == "core_7")
 
+# Plot predictions across space for the core area
+ggplot() + 
+  geom_raster(data = core_maps_7[core_maps_7$year%in%seq(2000,2024,by = 6),], 
+              aes(x = x, y = y), fill = "grey", col = NA) + 
+  geom_raster(data = core_maps_7[core_maps_7$year%in%seq(2000,2024,by = 6)&
+                                   core_maps_7$core==TRUE,], 
+              aes(x = x, y = y, fill = est)) +
+  ggtitle(expression(paste("Predicted relative biomass density (kg/",km^{2},")"))) +
+  geom_sf(data = land, fill = "darkgrey") + 
+  geom_sf(data = WEA_poly, fill = NA, col = "white", lwd = 0.75) + 
+  theme(text = element_text(size = font_size), 
+        plot.title = element_text(size = font_size), 
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(), 
+        legend.position = "bottom", 
+        legend.key.width = unit(2, "cm"), 
+        legend.key.height = unit(0.4, "cm")) +
+  coord_sf(xlim = c(125,950), ylim = c(4670, 5230)) + 
+  facet_wrap(~year) +
+  scale_fill_gradientn("", colors = viridis(100), na.value = "grey",
+                       trans = trans_new("log10", transform = function(x) log(x+1), 
+                                         inverse = function(x) exp(x)-1), 
+                       breaks = c(25, 500, 10000, NA), limits = c(25, NA))
+ggsave(paste0(getwd(),"/Figs/spatial_predictions_core.jpeg"), plot=last_plot(), 
+       width=6, height=4.4, units="in")
+
 ####Plot the percentage of total core biomass in the reserves and in each WEA###
 
 # Merge core data with the raster data, and filter this data to the WEAs and reserves
@@ -559,4 +587,21 @@ reserve_core_index_df %>% left_join(combined_core_index_df, by = c("year")) %>%
                                type = "dashed") +
   theme(text = element_text(size = font_size), panel.spacing.x = unit(0.6, "cm"))
 ggsave(paste0(getwd(),"/Figs/core_biomass_proportion_reserves.jpeg"), plot=last_plot(), 
+       width=7.2, height=5.5, units="in")
+
+####Plot an index for the total core area###
+
+# Plot the index
+ggplot(combined_core_index_df, aes(x = year, y = est/1e6, 
+                                   ymin = lwr/1e6, ymax = upr/1e6)) +
+  geom_ribbon(alpha = 0.2, col = NA) +
+  geom_path(size = 1.2) +
+  coord_cartesian(xlim = c(2000, 2024), ylim = c(0, NA), expand = FALSE) +
+  scale_x_continuous(breaks = seq(2000, 2020, by = 10)) +
+  labs(x = "Year", y = "Biomass index (kt)") +
+  theme_classic() +
+  theme(text = element_text(size = font_size), 
+        legend.text = element_text(size = font_size),
+        legend.position = "bottom")
+ggsave(paste0(getwd(),"/Figs/index_core_area.jpeg"), plot=last_plot(), 
        width=7.2, height=5.5, units="in")
